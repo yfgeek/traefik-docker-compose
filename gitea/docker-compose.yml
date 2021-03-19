@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+
+  gitea:
+    container_name: gitea
+    image: gitea/gitea:latest
+    restart: always
+    depends_on:
+      - traefik
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    networks:
+      - traefik
+    expose:
+      - 3000
+      - 22
+    labels:
+      - traefik.enable=true
+      # 设置HTTP强制跳转HTTPS 中间件
+      - traefik.http.middlewares.redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-https.redirectscheme.port=52443
+
+      # HTTP配置
+      - traefik.http.routers.gitea-web.rule=Host(`git.nas.yfgeek.com`,`git.yfgeek.com`)
+      - traefik.http.routers.gitea-web.entrypoints=http
+      - traefik.http.routers.gitea-web.service=gitea-web
+      - traefik.http.routers.gitea-web.middlewares=redirect-https
+
+      # HTTPS配置
+      - traefik.http.routers.gitea-web-secure.rule=Host(`git.nas.yfgeek.com`,`git.yfgeek.com`)
+      - traefik.http.routers.gitea-web-secure.entrypoints=https
+      - traefik.http.routers.gitea-web-secure.service=gitea-web
+      - traefik.http.routers.gitea-web-secure.tls=true
+      - traefik.http.routers.gitea-web-secure.tls.certresolver=my
+      - traefik.http.services.gitea-web.loadbalancer.server.port=3000
+
+      # SSH配置
+      - traefik.tcp.routers.gitea-ssh.rule=HostSNI(`*`)
+      - traefik.tcp.routers.gitea-ssh.entrypoints=ssh
+      - traefik.tcp.routers.gitea-ssh.service=gitea-ssh
+      - traefik.tcp.services.gitea-ssh.loadbalancer.server.port=22
+    volumes:
+      - /volume1/docker/gitea/data:/data
+
+
+networks:
+  traefik:
+    external: true

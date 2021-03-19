@@ -1,0 +1,24 @@
+[http.middlewares.dash-compress.compress]
+[http.middlewares.dash-auth.basicAuth]
+  users = [
+    "test:$apr1$ux2tmr06$Qz5r/BNEfzdxriR/0o30Z1",
+  ]
+
+[http.routers.dashboard]
+  rule = "Host(`dashboard.nas.yfgeek.com`)"
+  entrypoints = ["http"]
+  service = "dashboard@internal"
+  middlewares = ["dash-auth", "dash-compress"]
+
+[http.routers.api]
+  rule = "Host(`dashboard.nas.yfgeek.com`) && PathPrefix(`/api`)"
+  entrypoints = ["http"]
+  service = "api@internal"
+  middlewares = ["dash-auth", "dash-compress"]
+
+[http.routers.ping]
+  rule = "Host(`dashboard.nas.yfgeek.com`) && PathPrefix(`/ping`)"
+  entrypoints = ["http"]
+  service = "ping@internal"
+  middlewares = ["dash-auth", "dash-compress"]
+

@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:2.1.1
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /volume1/docker/portainer/data:/data
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      # 设置HTTP强制跳转HTTPS 中间件
+      - traefik.http.middlewares.redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-https.redirectscheme.port=52443
+
+      # HTTP配置
+      - traefik.http.routers.portainer.rule=Host(`port.nas.yfgeek.com`)
+      - traefik.http.routers.portainer.entrypoints=http
+      - traefik.http.routers.portainer.service=gitea-web
+      - traefik.http.routers.portainer.middlewares=redirect-https
+
+      # HTTPS配置
+      - traefik.http.routers.portainer-secure.rule=Host(`port.nas.yfgeek.com`)
+      - traefik.http.routers.portainer-secure.entrypoints=https
+      - traefik.http.routers.portainer-secure.service=portainer
+      - traefik.http.routers.portainer-secure.tls=true
+      - traefik.http.routers.portainer-secure.tls.certresolver=my
+      - traefik.http.services.portainer.loadbalancer.server.port=9000
+
+networks:
+  traefik:
+    external: true

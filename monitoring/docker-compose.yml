@@ -1,0 +1,74 @@
+version: '3.7'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - inbound
+    labels:
+       - "traefik.enable=true"
+       - "traefik.http.routers.prometheus.rule=Host(`prometheus`)"
+       - "traefik.http.routers.prometheus.entrypoints=http"
+       - "traefik.http.routers.prometheus.service=prometheus"
+       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+       - "traefik.docker.network=inbound"
+  
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring
+    networks:
+      - inbound
+    user: "472"
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.grafana.rule=Host(`grf.nas.yfgeek.com`,`grafana`)"
+        - "traefik.http.routers.grafana.entrypoints=http"
+        - "traefik.http.routers.grafana.service=grafana"
+        - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+        - "traefik.docker.network=inbound"
+
+  loki:
+    image: grafana/loki
+    expose:
+      - "3100"
+    volumes:
+      - /volume1/docker/prometheus/loki/local-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - inbound
+
+  promtail:
+    image: grafana/promtail
+    depends_on:
+      - loki
+    volumes:
+      - /volume1/docker/traefik/logs:/var/log
+      - /volume1/docker/prometheus/promtail/config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - inbound
+
+
+networks:
+  inbound:
+    name: inbound
+
+volumes:
+    prometheus_data: {}
+    grafana_data: {}
+    loki_data: {}

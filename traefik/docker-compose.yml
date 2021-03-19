@@ -1,0 +1,34 @@
+version: '3.7'
+
+services:
+
+  traefik:
+    container_name: traefik
+    environment:
+      - CF_API_EMAIL=CLOUDFLARE邮箱
+      - CLOUDFLARE_DNS_API_TOKEN=CLOUDFLARE API TOKEN
+      - CLOUDFLARE_ZONE_API_TOKEN=CLOUDFLARE API TOKEN
+    image: traefik:v2.1.3
+    restart: always
+    ports:
+      - target: 52080
+        published: 52080
+        mode: host
+      - target: 52443
+        published: 52443
+        mode: host
+      - target: 52022
+        published: 52022
+        mode: host
+      - "8080:8080"
+    command: traefik --configFile /etc/traefik.yml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./ssl/:/data/ssl/:rw
+      - ./traefik.yml:/etc/traefik.yml:ro
+      - ./config/:/etc/traefik/config/:ro
+      - ./logs/:/data/logs/:rw
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --proxy off localhost:8080/ping || exit 1"]
+      interval: 6h
+    network_mode: host

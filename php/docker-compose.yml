@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+
+  php:
+    image: php:7.4.3-fpm
+    container_name: php-fpm
+    restart: always
+    expose:
+      - 9000
+    volumes:
+      - /volume1/docker/php/www:/var/www/html
+    networks:
+      - inbound
+  nginx:
+    image: nginx
+    container_name: nginx-php
+    restart: always
+    depends_on:
+      - php
+    expose:
+      - 52080
+    volumes:
+      - /volume1/docker/php/www:/usr/share/nginx/html
+      - /volume1/docker/php/conf:/etc/nginx/conf.d
+    labels:
+      - traefik.enable=true
+      # 设置HTTP强制跳转HTTPS 中间件
+      - traefik.http.middlewares.redirect-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.redirect-https.redirectscheme.port=52443
+
+      # HTTP配置
+      - traefik.http.routers.php-web.rule=Host(`php.nas.yfgeek.com`)
+      - traefik.http.routers.php-web.entrypoints=http
+      - traefik.http.routers.php-web.service=php-web
+      - traefik.http.routers.php-web.middlewares=redirect-https
+      
+      # HTTPS配置
+      - traefik.http.routers.php-web-secure.rule=Host(`php.nas.yfgeek.com`)
+      - traefik.http.routers.php-web-secure.entrypoints=https
+      - traefik.http.routers.php-web-secure.service=php-web
+      - traefik.http.routers.php-web-secure.tls=true
+      - traefik.http.routers.php-web-secure.tls.certresolver=my
+      - traefik.http.services.php-web.loadbalancer.server.port=52080
+    networks:
+      - traefik
+      - inbound
+networks:
+  traefik:
+    external: true
+  inbound:
+    external: true

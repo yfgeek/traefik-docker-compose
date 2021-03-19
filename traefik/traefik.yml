@@ -1,0 +1,65 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+log:
+  level: "WARN"
+  format: "common"
+  filePath: "/data/logs/traefik.log"
+
+api:
+  dashboard: true
+  insecure: true
+
+ping: {}
+
+accessLog:
+  filePath: "/data/logs/access.log"
+  bufferingSize: 100
+  format: json
+  filters:    
+    minDuration: "10ms"
+
+providers:
+  docker:
+    watch: true
+    exposedByDefault: false
+    endpoint: "unix:///var/run/docker.sock"
+    swarmMode: false
+    useBindPortIP: false
+    network: "traefik"
+  file:
+    watch: true
+    directory: "/etc/traefik/config"
+    debugLogGeneratedTemplate: true
+
+entryPoints:
+  http:
+    address: ":52080"
+    forwardedHeaders:
+      insecure: true
+  https:
+    address: ":52443"
+    forwardedHeaders:
+      insecure: true
+  ssh:
+    address: ":52022"
+    forwardedHeaders:
+      insecure: true
+
+certificatesResolvers:
+  my:
+    acme:
+      email: "CLOUDFLARE邮箱"
+      storage: "/data/ssl/acme.json"
+      dnsChallenge:
+        resolvers: ["1.1.1.1:53", "8.8.8.8:53"]
+        provider: "cloudflare"
+        delayBeforeCheck: 30
+metrics:
+  prometheus:
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
